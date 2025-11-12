@@ -1,2 +1,3 @@
-# monitoring-suhu
-alat pendeteksi suhu dan kelembapan
+git rm nama_file
+git commit -m "hapus file nama_file"
+git push
