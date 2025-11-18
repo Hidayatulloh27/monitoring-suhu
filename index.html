@@ -149,11 +149,10 @@ latestRef.on("value", snapshot => {
 });
 
 
-// ===== History & Grafik (Final Fix) =====
 historyRef.on("value", snapshot => {
   const allData = snapshot.val();
   const nowUTC = Date.now() / 1000;
-  const last24hUTC = nowUTC - (24 * 60 * 60); // 24 jam terakhir UTC
+  const last24hUTC = nowUTC - (24 * 60 * 60); // 24 jam
 
   table.clear();
   chartTemp.data.labels = [];
@@ -162,21 +161,37 @@ historyRef.on("value", snapshot => {
   chartHumid.data.datasets[0].data = [];
 
   if (allData) {
-    Object.keys(allData).sort().forEach(key => {
-      const item = allData[key];
-      const ts = item.timestamp || 0;
+    Object.keys(allData)
+      .map(k => Number(k))           // *** FIX: ubah key ke angka ***
+      .sort((a, b) => a - b)         // *** FIX: sort berdasarkan waktu ***
+     Object.keys(allData)
+  .map(k => Number(k))       // ubah ke angka
+  .sort((a, b) => a - b)     // sort berdasarkan waktu
+  .forEach(key => {
 
-      if (ts >= last24hUTC) {
-        const suhu = item.suhu?.toFixed(2) || '--';
-        const hum = item.kelembapan?.toFixed(2) || '--';
-        const time = formatTimestamp(ts + (7 * 3600)); // WIB
-        table.row.add([key, suhu, hum, time]);
-        chartTemp.data.labels.push(time);
-        chartTemp.data.datasets[0].data.push(item.suhu);
-        chartHumid.data.labels.push(time);
-        chartHumid.data.datasets[0].data.push(item.kelembapan);
-      }
-    });
+
+        const item = allData[key];
+        const ts = item.timestamp || key;
+
+        if (ts >= last24hUTC) {
+          const suhu = item.suhu?.toFixed(2) || '--';
+          const hum = item.kelembapan?.toFixed(2) || '--';
+          const time = item.waktu || "--";   // gunakan waktu yang SAMA dengan halaman HOME
+
+         table.row.add([key, suhu, hum, time]);
+chartTemp.data.labels.push(time);
+chartTemp.data.datasets[0].data.push(item.suhu);
+chartHumid.data.labels.push(time);
+chartHumid.data.datasets[0].data.push(item.kelembapan);
+
+
+          // CHART
+          chartTemp.data.labels.push(time);
+          chartTemp.data.datasets[0].data.push(item.suhu);
+          chartHumid.data.labels.push(time);
+          chartHumid.data.datasets[0].data.push(item.kelembapan);
+        }
+      });
   }
 
   table.draw();
@@ -184,16 +199,18 @@ historyRef.on("value", snapshot => {
   chartHumid.update();
 });
 
-// ===== Format Timestamp ke WIB =====
+
 function formatTimestamp(ts) {
-  if (!ts || typeof ts !== 'number') return '--';
-  const date = new Date(ts * 1000); // detik → milidetik
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${day}/${month} ${hours}:${minutes}`;
+  const date = new Date(ts * 1000); // dari epoch ke JS Date
+  return date.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).replace(",", "");
 }
+
 
 // --- Status Monitoring ---
 function updateStatus(wifi, firebase) {
